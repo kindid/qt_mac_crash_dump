@@ -8,5 +8,6 @@
 #include <QDebug>
 
 #define here (qDebug().nospace().noquote() << "file:///" << __FILE__ << ":" << __LINE__ << ":" << __FUNCTION__ << ":").space()
+#define hrep(X) "" #X "[" << (X) << "]"
 
 #endif

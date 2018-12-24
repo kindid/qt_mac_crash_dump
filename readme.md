@@ -16,6 +16,10 @@ It seems like profiling is no big challenge except that you won't be able to cal
 
 If you get output from any of the "mld" functions then it's because something isn't knowable or parsable. Maybe we can improve on this.
 
+
+Generally not very interested in anything that fails
+The top 2 are a waste of time too (backtrack_symsobl in libdyld.dylib)
+
 Yours,
   Matthew.
 

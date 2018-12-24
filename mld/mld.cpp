@@ -39,7 +39,7 @@ int atos(char const * const /*program_name*/, void const * const addr, char * bu
 {
     char addr2line_cmd[512] = {0};
     pid_t pid = getpid();
-    sprintf(addr2line_cmd, "atos -p%d -fullPath %p", pid,  addr);//program_name, addr );
+    sprintf(addr2line_cmd, "atos -p%d -fullPath %p 2>/dev/null", pid,  addr);//program_name, addr );
     return execute( addr2line_cmd, buff, buffSize );
 }
 
@@ -141,10 +141,10 @@ void dump_stack_trace( )
                     // all done, proper output formed
                 } else {
                     // todo; there could be return data in "buff"
-                    here << "atos_failed:backtrace_symbol:" << bts[i];
+//                    here << "atos_failed:backtrace_symbol:" << bts[i];
                 }
             } else {
-                here << "parse_fail:backtrace_symbol:" << bts[i];
+//                here << "parse_fail:backtrace_symbol:" << bts[i];
             }
         }
         free( bts );
@@ -202,18 +202,20 @@ const char * sig_names[] =
 
 void sig_handler_generic( int sig, siginfo_t * /*siginfo*/, void * /*context*/ )
 {
+    qDebug().noquote().nospace() << "////////////////////////////////////////////////////////////////";
     if (sig == SIGPROF) {
         here << "SHOULD NOT BE HERE!!!";
     } else {
         // check out the sigprof stuff plz
         // for really good diagnostics. *sigh*
         if (sig >= 0 && sig <= int(sizeof(sig_names) / sizeof(sig_names[0]))) {
-            here << "Signal caught " << sig_names[sig];
+            here << sig_names[sig] << sig_names[sig] << sig_names[sig] << sig_names[sig];
         } else {
             here << "Unknown signal caught " << sig;
         }
     }
     dump_stack_trace();
+    qDebug().noquote().nospace() << "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\";
     _exit(1);
 }
 #if 0
