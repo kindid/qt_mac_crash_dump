@@ -12,10 +12,21 @@
 #include <inttypes.h>
 #include <mach-o/dyld.h>
 #include <here.h>
+#include <sys/time.h>
+
+struct mld_ctor {
+    mld_ctor() { mld::init(); }
+};
+
+static mld_ctor init;
+
+// you could avoid any allocations by doing the following
+//  1 - pre-allocate your output buffer.
+//  2 - pre-allocate a bunch of void *'s the get the stack trace
 
 namespace mld
 {
-static char mouldy_out[PAGE_SIZE];
+//static char mouldy_out[PAGE_SIZE];
 static char mouldy_buffer[PAGE_SIZE];
 
 int execute( const char * cmd, char * buf, size_t bufSize ) {
@@ -56,13 +67,13 @@ bool parseBacktraceMessage(const char * backtrace_symbol, uintptr_t * addr)
     char filename[ 512 ];
     uintptr_t address;
 
-    if (
-            sscanf(
+    if (sscanf(
                 backtrace_symbol
                 , "%d%*[ \t]%s%*[ \t]%" SCNxPTR
                 , &stackLevel
                 , filename
-                , &address)) {       // this is how real brackets intermingle. got back and tag a line. (that's all this can do - maybe labels ;-)!)
+                , &address))
+    {       // this is how real brackets intermingle. got back and tag a line. (that's all this can do - maybe labels ;-)!). the bracket doesn't really do anything except force starts and ends.. but here it is...
         //            here << "YODDDDDLE!" << stackLevel << filename << address;
         *addr = address;
         return true;
@@ -75,10 +86,10 @@ bool parseBacktraceMessage(const char * backtrace_symbol, uintptr_t * addr)
 
 bool parseAtos(uintptr_t addr)
 {
-    if (atos(nullptr, (void *) (addr), mouldy_buffer, sizeof(mouldy_buffer)))
-    {
+    mouldy_buffer[0] = '\0';
+    // this function must \0 postifx or
+    if (atos(nullptr, (void *) (addr), mouldy_buffer, sizeof(mouldy_buffer))) {
         //        here << "!!!" << mouldy_buffer;
-
         char * line_start = nullptr;
         char * line_end = nullptr;
         char * file_start = nullptr;
@@ -129,7 +140,8 @@ bool parseAtos(uintptr_t addr)
             }
         }
     } else {
-        here << "ATOS FAILED";
+        // what output did atos give?
+        here << "failed:atos" << mouldy_buffer;
         return false;
     }
     //    here << "parse_failure:" << mouldy_buffer;
@@ -148,38 +160,36 @@ void parseStackTrace( )
     static void * stack_traces[kMaxStackFrames];    // this is now possible. or, frankly, limit yourself - can't read in blocks anyway
     trace_size = backtrace(stack_traces, kMaxStackFrames);
     bts = backtrace_symbols(stack_traces, trace_size);
-
-    for ( int i = 0; i < trace_size; ++i )
-    {
-
-        //        here << "$$$" << messages[i];
-        //        int stackLevel;
-        //        char filename[ 512 ];
-        uintptr_t address;
-        //        char symbol[ 512 ];
-        //        uintptr_t symbolOffset;
-        //        uintptr_t functionOffset;
-        //        bool symbolOffsetValid = false;
-        //        bool somethingValid = true;
-
-        if (parseBacktraceMessage(bts[i], &address)) {
-            if (parseAtos(address)) {
-                // all done, proper output formed
+    if (bts) {
+        for ( int i = 0; i < trace_size; ++i) {
+            uintptr_t address;
+            if (parseBacktraceMessage(bts[i], &address)) {
+                if (parseAtos(address)) {
+                    // all done, proper output formed
+                } else {
+                    // todo; there could be return data in "buff"
+                    here << "atos_failed:backtrace_symbol:" << bts[i];
+                }
             } else {
-                // now it gets a bit mad
-                here << "atos_failed:backtrace_symbol:" << bts[i];
+                here << "parse_fail:backtrace_symbol:" << bts[i];
             }
-        } else {
-            here << "parse_fail:backtrace_symbol:" << bts[i];
         }
-    }
-    // i don't get this. i mean, really? this could easily fail on us but everything we want to know
-    // should be right on the stack... g'z.
-    if (bts)
-    {
+        // i don't get this. i mean, really? this could easily fail on us but everything we want to know
+        // should be right on the stack... g'z.
         free( bts );
     }
 }
+#if 0
+#define name_table_init(x)
+
+struct name_table {
+    unsigned nc;
+    const char * names[];
+};
+#endif
+// each of these can do followed by another table I guess
+
+// these should contain 2 pointers, the string name and then an onward pointer to the sub objects
 
 const char * sig_names[] =
 {
@@ -218,7 +228,7 @@ const char * sig_names[] =
     , "SIGXCPU"         // 24
     , "SIGXFSZ"         // 25
     , "SIGVTALRM"       // 26
-    , "SIGPROF"         // 27
+    , "SIGPROF"         // 27   // this one seems really handy.
     #if  (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE))
     , "SIGWINCH"        // 28
     , "SIGINFO"         // 29
@@ -229,166 +239,79 @@ const char * sig_names[] =
     , "SIGUSR1"         // 30
     , "SIGUSR2"         // 31
 };
-
 #if 0
+// there's a lot of these in
+const char * sigill_names[] = {
+    #if !defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE)
+    "ILL_NOOP"        /* if only I knew... */
+    #else
+    "INVALID_0"
+    #endif
+    , "ILL_ILLOPC"      /* [XSI] illegal opcode */
+    , "ILL_ILLTRP"      /* [XSI] illegal trap */
+    , "ILL_PRVOPC"      /* [XSI] privileged opcode */
+    , "ILL_ILLOPN"      /* [XSI] illegal operand -NOTIMP */
+    , "ILL_ILLADR"      /* [XSI] illegal addressing mode -NOTIMP */
+    , "ILL_PRVREG"      /* [XSI] privileged register -NOTIMP */
+    , "ILL_COPROC"      /* [XSI] coprocessor error -NOTIMP */
+    , "ILL_BADSTK"      /* [XSI] internal stack error -NOTIMP */
+};
 
-#define	SIGHUP	1	/* hangup */
-#define	SIGINT	2	/* interrupt */
-#define	SIGQUIT	3	/* quit */
-#define	SIGILL	4	/* illegal instruction (not reset when caught) */
-#define	SIGTRAP	5	/* trace trap (not reset when caught) */
-#define	SIGABRT	6	/* abort() */
-#if  (defined(_POSIX_C_SOURCE) && !defined(_DARWIN_C_SOURCE))
-#define	SIGPOLL	7	/* pollable event ([XSR] generated, not supported) */
-#else	/* (!_POSIX_C_SOURCE || _DARWIN_C_SOURCE) */
-#define	SIGIOT	SIGABRT	/* compatibility */
-#define	SIGEMT	7	/* EMT instruction */
-#endif	/* (!_POSIX_C_SOURCE || _DARWIN_C_SOURCE) */
-#define	SIGFPE	8	/* floating point exception */
-#define	SIGKILL	9	/* kill (cannot be caught or ignored) */
-#define	SIGBUS	10	/* bus error */
-#define	SIGSEGV	11	/* segmentation violation */
-#define	SIGSYS	12	/* bad argument to system call */
-#define	SIGPIPE	13	/* write on a pipe with no one to read it */
-#define	SIGALRM	14	/* alarm clock */
-#define	SIGTERM	15	/* software termination signal from kill */
-#define	SIGURG	16	/* urgent condition on IO channel */
-#define	SIGSTOP	17	/* sendable stop signal not from tty */
-#define	SIGTSTP	18	/* stop signal from tty */
-#define	SIGCONT	19	/* continue a stopped process */
-#define	SIGCHLD	20	/* to parent on child stop or exit */
-#define	SIGTTIN	21	/* to readers pgrp upon background tty read */
-#define	SIGTTOU	22	/* like TTIN for output if (tp->t_local&LTOSTOP) */
-#if  (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE))
-#define	SIGIO	23	/* input/output possible signal */
+const char * sigfpe_names[] = {
+    #if !defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE)
+    "FPE_NOOP"        /* if only I knew... */
+    #else
+    "INVALID_0"
+    #endif
+    , "FPE_FLTDIV"      /* [XSI] floating point divide by zero */
+    , "FPE_FLTOVF"      /* [XSI] floating point overflow */
+    , "FPE_FLTUND"      /* [XSI] floating point underflow */
+    , "FPE_FLTRES"      /* [XSI] floating point inexact result */
+    , "FPE_FLTINV"      /* [XSI] invalid floating point operation */
+    , "FPE_FLTSUB"      /* [XSI] subscript out of range -NOTIMP */
+    , "FPE_INTDIV"      /* [XSI] integer divide by zero */
+    , "FPE_INTOVF"      /* [XSI] integer overflow */
+};
 #endif
-#define	SIGXCPU	24	/* exceeded CPU time limit */
-#define	SIGXFSZ	25	/* exceeded file size limit */
-#define	SIGVTALRM 26	/* virtual time alarm */
-#define	SIGPROF	27	/* profiling time alarm */
-#if  (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE))
-#define SIGWINCH 28	/* window size changes */
-#define SIGINFO	29	/* information request */
-#endif
-#define SIGUSR1 30	/* user defined signal 1 */
-#define SIGUSR2 31	/* user defined signal 2 */
-#endif
-
+// at this point I give up!!
 
 // should be "action" if you look at how it's coded up
-void signalAction( int sig, siginfo_t * siginfo, void * /*context*/ )
+void signalAction( int sig, siginfo_t * /*siginfo*/, void * /*context*/ )
 {
-    if (sig >= 0 && sig <= (sizeof(sig_names) / sizeof(sig_names[0]))) {
-        here << "Signal caught " << sig_names[sig];
+    if (sig == SIGPROF) {
+        here << "SHOULD NOT BE HERE!!!";
     } else {
-        here << "Unknown signal caught " << sig;
-    }
-#if 0
-    // dude, there's a HUGE number
-    // output with "here" so you can easily see that is was
-    // the SignalHandler::handler() that caused it, make the
-    // report clickable & be able to
-    switch(sig)
-    {
-    case SIGSEGV:
-        fputs("Caught SIGSEGV: Segmentation Fault\n", stderr);
-        break;
-
-    case SIGBUS:
-        fputs("Caught SIGBUG: Bus error (bad memory access)\n", stderr);
-        break;
-
-    case SIGINT:
-        fputs("Caught SIGINT: Interactive attention signal, (usually ctrl+c)\n", stderr);
-        break;
-
-    case SIGFPE:
-        switch(siginfo->si_code)
-        {
-        case FPE_INTDIV:
-            fputs("Caught SIGFPE: (integer divide by zero)\n", stderr);
-            break;
-        case FPE_INTOVF:
-            fputs("Caught SIGFPE: (integer overflow)\n", stderr);
-            break;
-        case FPE_FLTDIV:
-            fputs("Caught SIGFPE: (floating-point divide by zero)\n", stderr);
-            break;
-        case FPE_FLTOVF:
-            fputs("Caught SIGFPE: (floating-point overflow)\n", stderr);
-            break;
-        case FPE_FLTUND:
-            fputs("Caught SIGFPE: (floating-point underflow)\n", stderr);
-            break;
-        case FPE_FLTRES:
-            fputs("Caught SIGFPE: (floating-point inexact result)\n", stderr);
-            break;
-        case FPE_FLTINV:
-            fputs("Caught SIGFPE: (floating-point invalid operation)\n", stderr);
-            break;
-        case FPE_FLTSUB:
-            fputs("Caught SIGFPE: (subscript out of range)\n", stderr);
-            break;
-        default:
-            fputs("Caught SIGFPE: Arithmetic Exception\n", stderr);
-            break;
+        // check out the sigprof stuff plz
+        // for really good diagnostics. *sigh*
+        if (sig >= 0 && sig <= int(sizeof(sig_names) / sizeof(sig_names[0]))) {
+            here << "Signal caught " << sig_names[sig];
+        } else {
+            here << "Unknown signal caught " << sig;
         }
-        break;
-
-    case SIGILL:
-        switch(siginfo->si_code)
-        {
-        case ILL_ILLOPC:
-            fputs("Caught SIGILL: (illegal opcode)\n", stderr);
-            break;
-        case ILL_ILLOPN:
-            fputs("Caught SIGILL: (illegal operand)\n", stderr);
-            break;
-        case ILL_ILLADR:
-            fputs("Caught SIGILL: (illegal addressing mode)\n", stderr);
-            break;
-        case ILL_ILLTRP:
-            fputs("Caught SIGILL: (illegal trap)\n", stderr);
-            break;
-        case ILL_PRVOPC:
-            fputs("Caught SIGILL: (privileged opcode)\n", stderr);
-            break;
-        case ILL_PRVREG:
-            fputs("Caught SIGILL: (privileged register)\n", stderr);
-            break;
-        case ILL_COPROC:
-            fputs("Caught SIGILL: (coprocessor error)\n", stderr);
-            break;
-        case ILL_BADSTK:
-            fputs("Caught SIGILL: (internal stack error)\n", stderr);
-            break;
-        default:
-            fputs("Caught SIGILL: Illegal Instruction\n", stderr);
-            break;
-        }
-        break;
-
-    case SIGTERM:
-        fputs("Caught SIGTERM: a termination request was sent to the program\n", stderr);
-        break;
-    case SIGABRT:
-        fputs("Caught SIGABRT: usually caused by an abort() or assert()\n", stderr);
-        break;
-    default:
-        break;
     }
-#endif
+    parseStackTrace();
 
-    parseStackTrace( );
-    fflush( stderr );
-    fflush( stdout );
+    // WTF?
+    //    fflush(stderr);
+    //    fflush(stdout);
 
-    _exit( 1 );
+    _exit(1);
 }
 
-// you know, i just don't care about this.
-bool init()
+void signalActionProf( int /*sig*/, siginfo_t * /*siginfo*/, void * /*context*/ )
 {
+    here << "signalling profile";
+}
+
+
+// dude, you can even install your own profiler handler - totally awesome - I mean incredible
+// I can see this becoming very cool.
+
+// you know, i just don't care about this.
+void init()
+{
+    here;
+
     struct sigaction sig_action = {};
     sig_action.sa_sigaction = signalAction;
     sigemptyset(&sig_action.sa_mask);
@@ -401,6 +324,29 @@ bool init()
     sigaction(SIGILL, &sig_action, NULL);
     sigaction(SIGTERM, &sig_action, NULL);
     sigaction(SIGABRT, &sig_action, NULL);
+    // don't do this! use your own handler!!!
 
+
+    struct sigaction sig_action_prof = {};
+    memset(&sig_action_prof, 0, sizeof(sig_action_prof));
+    sig_action_prof.sa_sigaction = signalActionProf;
+    sigemptyset(&sig_action_prof.sa_mask);
+    sig_action_prof.sa_flags = SA_RESTART | SA_SIGINFO;
+    sigaction(SIGPROF, &sig_action_prof, NULL);
+
+    static struct itimerval timer;
+
+    timer.it_interval.tv_sec = 1;
+    timer.it_interval.tv_usec = 0; //1000000 / 1000; /* 1000hz */
+    timer.it_value = timer.it_interval;
+
+    /* Install timer */
+    if (setitimer(ITIMER_PROF, &timer, NULL) != 0)
+    {
+        printf("Timer could not be initialized \n");
+    }
+
+
+    //}
 }
 }

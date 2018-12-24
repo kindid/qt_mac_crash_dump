@@ -9,7 +9,7 @@
 
 namespace mld
 {
-    bool init();
+    void init();
 }
 
 #endif // MLD2_H

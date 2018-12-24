@@ -15,7 +15,8 @@
 
 int main(int argc, char *argv[])
 {
-    mld::init();
+    // should be able to remove this too...
+//    mld::init();
 
 
     QList<QList<QString *>> bug;
