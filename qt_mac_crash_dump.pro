@@ -23,3 +23,5 @@ SOURCES += \
 HEADERS += \
     here.h \
     mld.h
+
+OTHER_FILES += readme.md
