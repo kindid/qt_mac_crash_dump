@@ -21,7 +21,8 @@ If you get output from any of the "mld" functions then it's because something is
 file:///../qt_mac_crash_dump/mld/mld.cpp:227:init:
 ```
 Normal program output here until something goes wrong.
-```file:///../qt_mac_crash_dump/mld/mld.cpp:211:sig_handler_generic: Signal caught  SIGSEGV
+```
+file:///../qt_mac_crash_dump/mld/mld.cpp:211:sig_handler_generic: Signal caught  SIGSEGV
 file:///../qt_mac_crash_dump/mld/mld.cpp:134: mld::dump_stack_trace() (in qt_mac_crash_dump) 
 file:///../qt_mac_crash_dump/mld/mld.cpp:216: mld::sig_handler_generic(int, __siginfo*, void*) (in qt_mac_crash_dump) 
 file:///../qt_mac_crash_dump/mld/mld.cpp:144:dump_stack_trace: atos_failed:backtrace_symbol: 2   libsystem_platform.dylib            0x00007fff6fb3ff5a _sigtramp + 26
@@ -32,7 +33,9 @@ file:///../qt_mac_crash_dump/mld/mld.cpp:144:dump_stack_trace: atos_failed:backt
 file:///../qt_mac_crash_dump/mld/mld.cpp:144:dump_stack_trace: atos_failed:backtrace_symbol: 7   ???                                 0x0000000000000001 0x0 + 1
 /Users/kuiash/github/build-qt_mac_crash_dump-Desktop_Qt_5_11_0_clang_64bit-Debug/qt_mac_crash_dump exited with code 1
 ```
+Although not obvious here the file:line prefixes are clickable and will take you straight to the offending lines of code.
 
+You can see several lines of failure in the current code and this saddens me a little! The actual offender is main.cpp:38, well, partly. That's what crashed (null pointer deref) but the cause is, clearly, elsewhere.
 
 # Prologue
 
