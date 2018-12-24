@@ -2,14 +2,12 @@
 /// (C) kindid ltd 2018+ //////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef MLD2_H
-#define MLD2_H
-
-#include <stdlib.h>
+#ifndef _h_mld_
+#define _h_mld_
 
 namespace mld
 {
     void init();
 }
 
-#endif // MLD2_H
+#endif

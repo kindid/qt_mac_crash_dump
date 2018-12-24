@@ -16,10 +16,10 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-    mld2.cpp \
-    here.cpp
+    here.cpp \
+    mld.cpp
 
 
 HEADERS += \
-    mld2.h \
-    here.h
+    here.h \
+    mld.h
