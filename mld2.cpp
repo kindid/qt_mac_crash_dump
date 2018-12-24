@@ -35,6 +35,10 @@ int atos(char const * const /*program_name*/, void const * const addr, char * bu
 {
     // on stack - probably not safe *meh*
     char addr2line_cmd[512] = {0};
+
+    // ok, instead of PID maybe executable file would let me get additional
+    // info - maybe not -
+
     // yeah, just like this. if this doesn't work then we'll try
     //
     pid_t pid = getpid();
@@ -45,20 +49,8 @@ int atos(char const * const /*program_name*/, void const * const addr, char * bu
     return execute( addr2line_cmd, buff, buffSize );
 }
 
-// Check if file exists.
-bool FileExists( const char * filename )
-{
-    if ( FILE * fh = fopen( filename, "r" ) )
-    {
-        fclose( fh );
-        return true;
-    }
-
-    return false;
-}
-
 // where do you want it left?
-bool ParseBacktraceMessage(const char * backtrace_symbol, uintptr_t * addr)
+bool parseBacktraceMessage(const char * backtrace_symbol, uintptr_t * addr)
 {
     int stackLevel;
     char filename[ 512 ];
@@ -85,7 +77,7 @@ bool parseAtos(uintptr_t addr)
 {
     if (atos(nullptr, (void *) (addr), mouldy_buffer, sizeof(mouldy_buffer)))
     {
-//        here << "!!!" << mouldy_buffer;
+        //        here << "!!!" << mouldy_buffer;
 
         char * line_start = nullptr;
         char * line_end = nullptr;
@@ -99,7 +91,7 @@ bool parseAtos(uintptr_t addr)
         }
         if (last < mouldy_buffer) {
             // deaded
-//            here << "parse failure";
+            //            here << "parse failure";
         } else {
             last--;
             line_end = last;
@@ -108,12 +100,12 @@ bool parseAtos(uintptr_t addr)
             }
             if (last < mouldy_buffer) {
                 // deaded
-//                here << "parse failure";
+                //                here << "parse failure";
             } else {
                 line_start = last + 1;
                 last--;
                 if (last < mouldy_buffer) {
-//                    here << "parse failure";
+                    //                    here << "parse failure";
                 } else {
                     file_end = last;
                     //here << *file_end;
@@ -121,14 +113,14 @@ bool parseAtos(uintptr_t addr)
                         last--;
                     }
                     if (last < mouldy_buffer) {
-//                        here << "parse failure";
+                        //                        here << "parse failure";
                     } else {
                         file_start = last + 1;
                         // this, right here, is how you get performance.
                         //                                    here << "YOU DID IT!";
                         // i don't want quotes dude.
                         // the message is jsut 'buff' the first part of which you want anyway
-//                        here << "THIS->";
+                        //                        here << "THIS->";
                         qDebug().nospace().noquote() << "file:///" << QLatin1String(file_start, (file_end - file_start) + 1) << ":" << QLatin1String(line_start, 1 + (line_end - line_start)) << ": " << QLatin1String(mouldy_buffer, file_start - 1);//this is my message";
                         return true;
                         //here << QLatin1String(line_start, line_end - line_start);
@@ -140,14 +132,14 @@ bool parseAtos(uintptr_t addr)
         here << "ATOS FAILED";
         return false;
     }
-//    here << "parse_failure:" << mouldy_buffer;
+    //    here << "parse_failure:" << mouldy_buffer;
     return false;
     // you may well fail - in this case all you can do is output the message line - which will probably not be
     // clickable unless you want to end up back here (this is possibly desirable)
 }
 
 // Print stack trace.
-void PrintStackTrace( )
+void parseStackTrace( )
 {
     int trace_size = 0;
     char ** bts = ( char ** )NULL;
@@ -160,7 +152,7 @@ void PrintStackTrace( )
     for ( int i = 0; i < trace_size; ++i )
     {
 
-//        here << "$$$" << messages[i];
+        //        here << "$$$" << messages[i];
         //        int stackLevel;
         //        char filename[ 512 ];
         uintptr_t address;
@@ -170,7 +162,7 @@ void PrintStackTrace( )
         //        bool symbolOffsetValid = false;
         //        bool somethingValid = true;
 
-        if (ParseBacktraceMessage(bts[i], &address)) {
+        if (parseBacktraceMessage(bts[i], &address)) {
             if (parseAtos(address)) {
                 // all done, proper output formed
             } else {
@@ -188,6 +180,55 @@ void PrintStackTrace( )
         free( bts );
     }
 }
+
+const char * sig_names[] =
+{
+    "INVALID_0"       // 0
+    , "SIGHUP"          // 1
+    , "SIGINT"          // 2
+    , "SIGQUIT"         // 3
+    , "SIGILL"          // 4
+    , "SIGTRAP"         // 5
+    , "SIGABRT"         // 6
+    #if  (defined(_POSIX_C_SOURCE) && !defined(_DARWIN_C_SOURCE))
+    , "SIGPOLL"         // 7
+    #else
+    , "SIGEMT"          // 7
+    #endif
+    , "SIGFPE"          // 8
+    , "SIGKILL"         // 9
+    , "SIGBUS"          // 10
+    , "SIGSEGV"         // 11
+    , "SIGSYS"          // 12
+    , "SIGPIPE"         // 13
+    , "SIGALRM"         // 14
+    , "SIGTERM"         // 15
+    , "SIGURG"          // 16
+    , "SIGSTOP"         // 17
+    , "SIGTSTP"         // 18
+    , "SIGCONT"         // 19
+    , "SIGCHLD"         // 20
+    , "SIGTTIN"         // 21
+    , "SIGTTOU"         // 22
+    #if  (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE))
+    , "SIGIO"           // 23
+    #else
+    , "INVALID_23"      // 23
+    #endif
+    , "SIGXCPU"         // 24
+    , "SIGXFSZ"         // 25
+    , "SIGVTALRM"       // 26
+    , "SIGPROF"         // 27
+    #if  (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE))
+    , "SIGWINCH"        // 28
+    , "SIGINFO"         // 29
+    #else
+    , "INVALID_28"      // 28
+    , "INVALID_29"      // 29
+    #endif
+    , "SIGUSR1"         // 30
+    , "SIGUSR2"         // 31
+};
 
 #if 0
 
@@ -235,8 +276,14 @@ void PrintStackTrace( )
 
 
 // should be "action" if you look at how it's coded up
-void Handler( int sig, siginfo_t * siginfo, void * /*context*/ )
+void signalAction( int sig, siginfo_t * siginfo, void * /*context*/ )
 {
+    if (sig >= 0 && sig <= (sizeof(sig_names) / sizeof(sig_names[0]))) {
+        here << "Signal caught " << sig_names[sig];
+    } else {
+        here << "Unknown signal caught " << sig;
+    }
+#if 0
     // dude, there's a HUGE number
     // output with "here" so you can easily see that is was
     // the SignalHandler::handler() that caused it, make the
@@ -330,7 +377,9 @@ void Handler( int sig, siginfo_t * siginfo, void * /*context*/ )
     default:
         break;
     }
-    PrintStackTrace( );
+#endif
+
+    parseStackTrace( );
     fflush( stderr );
     fflush( stdout );
 
@@ -340,45 +389,18 @@ void Handler( int sig, siginfo_t * siginfo, void * /*context*/ )
 // you know, i just don't care about this.
 bool init()
 {
-#if 0
-    char path[ 512 ];
-    uint32_t size = sizeof( path );
-    if ( _NSGetExecutablePath( path, &size ) == 0 )
-    {
-        if ( ! realpath( path, m_ExeFilename ) )
-        {
-            strcpy( m_ExeFilename, path );
-        }
-    }
-    else
-    {
-        strcpy( m_ExeFilename, argv ? argv : "" );
-    }
-#endif
     struct sigaction sig_action = {};
-    sig_action.sa_sigaction = Handler;
+    sig_action.sa_sigaction = signalAction;
     sigemptyset(&sig_action.sa_mask);
     sig_action.sa_flags = SA_SIGINFO;
 
-    // just why. it's C++ code - should probably use Qt
-    // QList<int> or something. then just for_each
-    int toCatch[ ] = {
-        SIGSEGV,
-        SIGBUS,
-        SIGFPE,
-        SIGINT,
-        SIGILL,
-        SIGTERM,
-        SIGABRT
-    };
+    sigaction(SIGSEGV, &sig_action, NULL);
+    sigaction(SIGBUS, &sig_action, NULL);
+    sigaction(SIGFPE, &sig_action, NULL);
+    sigaction(SIGINT, &sig_action, NULL);
+    sigaction(SIGILL, &sig_action, NULL);
+    sigaction(SIGTERM, &sig_action, NULL);
+    sigaction(SIGABRT, &sig_action, NULL);
 
-    bool okay = true;
-#define PiArraySize(x) (sizeof(toCatch) / sizeof(toCatch[0]))
-    for ( size_t toCatchIx = 0; toCatchIx < PiArraySize( toCatch ); ++toCatchIx )
-    {
-        okay &= sigaction( toCatch[ toCatchIx ], &sig_action, NULL ) == 0;
-    }
-
-    return okay;
 }
 }
