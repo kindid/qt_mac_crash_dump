@@ -8,5 +8,8 @@
 #include <QDebug>
 
 #define here (qDebug().nospace().noquote() << "file:///" << __FILE__ << ":" << __LINE__ << ":" << __FUNCTION__ << ":").space()
+#define hrep(X) "" #X << X
+
+// i DO need a critical AND that critical needs to be as flexible as everyone else.
 
 #endif

@@ -208,12 +208,14 @@ void sig_handler_generic( int sig, siginfo_t * /*siginfo*/, void * /*context*/ )
         // check out the sigprof stuff plz
         // for really good diagnostics. *sigh*
         if (sig >= 0 && sig <= int(sizeof(sig_names) / sizeof(sig_names[0]))) {
+            here << "////////////////////////////////////////////////////////////////";
             here << "Signal caught " << sig_names[sig];
         } else {
             here << "Unknown signal caught " << sig;
         }
     }
     dump_stack_trace();
+    here << "////////////////////////////////////////////////////////////////";
     _exit(1);
 }
 #if 0
